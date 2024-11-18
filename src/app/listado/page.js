@@ -1,13 +1,70 @@
 // src/app/listado/page.js
 "use client";
 import Link from "next/link";
-
 import { useEffect, useState } from "react";
 import { db } from "../lib/firebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
-import DataTable from "react-data-table-component";
+import DataTable, { createTheme } from "react-data-table-component";
 import "bootstrap/dist/css/bootstrap.min.css";
-import "./listado.module.css";
+
+
+function capitalizeFirstLetter(text) {
+  if (!text) return ''; // Maneja casos donde el texto puede ser null o undefined
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+}
+// Crear un tema oscuro personalizado (opcional)
+createTheme(
+  "dark",
+  {
+    text: {
+      primary: "#FFFFFF",
+      secondary: "#E5E5E5",
+    },
+    background: {
+      default: "#1a1a1a",
+    },
+    context: {
+      background: "#333333",
+      text: "#FFFFFF",
+    },
+    divider: {
+      default: "#454545",
+    },
+    action: {
+      button: "rgba(255,255,255,.54)",
+      hover: "rgba(255,255,255,.08)",
+      disabled: "rgba(255,255,255,.12)",
+    },
+  },
+  "dark"
+);
+
+// Estilos personalizados para la tabla
+const customStyles = {
+  rows: {
+    style: {
+      minHeight: "60px", // Aumenta la altura de las filas
+      fontSize: "18px", // Aumenta el tamaño de la fuente en las filas
+    },
+    highlightOnHoverStyle: {
+      backgroundColor: "#333333",
+      color: "#FFFFFF",
+      cursor: "pointer",
+    },
+  },
+  headCells: {
+    style: {
+      fontSize: "20px", // Aumenta el tamaño de la fuente en los encabezados
+      backgroundColor: "#1a1a1a",
+      color: "#FFFFFF",
+    },
+  },
+  cells: {
+    style: {
+      fontSize: "18px", // Aumenta el tamaño de la fuente en las celdas
+    },
+  },
+};
 
 export default function ListadoPage() {
   const [items, setItems] = useState([]);
@@ -20,11 +77,15 @@ export default function ListadoPage() {
       const querySnapshot = await getDocs(collection(db, "inventario"));
       const data = querySnapshot.docs.map((doc) => {
         const item = doc.data();
-        const timestamp = item.timestamp ? new Date(item.timestamp.seconds * 1000) : null;
+        const timestamp = item.timestamp
+          ? new Date(item.timestamp.seconds * 1000)
+          : null;
         return {
           id: doc.id,
           ...item,
-          fecha: timestamp ? timestamp.toLocaleDateString("es-CL") : "Sin fecha",
+          fecha: timestamp
+            ? timestamp.toLocaleDateString("es-CL")
+            : "Sin fecha",
         };
       });
       setItems(data);
@@ -38,13 +99,13 @@ export default function ListadoPage() {
       name: "Nombre",
       selector: (row) => row.nombre,
       sortable: true,
-      cell: (row) => (
+      cell: ({ nombre }) => (
         <div
           className="text-truncate"
           style={{ cursor: "pointer", maxWidth: "150px" }}
-          onClick={() => setSelectedText({ title: "Nombre", text: row.nombre })}
+          onClick={() => setSelectedText({ title: "Nombre", text: nombre })}
         >
-          {row.nombre}
+          {capitalizeFirstLetter(nombre)}
         </div>
       ),
     },
@@ -57,13 +118,15 @@ export default function ListadoPage() {
       name: "Descripción",
       selector: (row) => row.descripcion,
       sortable: true,
-      cell: (row) => (
+      cell: ({ descripcion }) => (
         <div
           className="text-truncate"
           style={{ cursor: "pointer", maxWidth: "150px" }}
-          onClick={() => setSelectedText({ title: "Descripción", text: row.descripcion })}
+          onClick={() =>
+            setSelectedText({ title: "Descripción", text: descripcion })
+          }
         >
-          {row.descripcion}
+           {capitalizeFirstLetter(descripcion)}
         </div>
       ),
     },
@@ -74,21 +137,22 @@ export default function ListadoPage() {
     },
     {
       name: "Imagen",
-      cell: (row) => (
+      ignoreRowClick: true,
+      cell: ({ photoURL }) => (
         <button
           className="btn btn-info"
-          onClick={() => setSelectedImage(row.photoURL)}
+          onClick={() => setSelectedImage(photoURL)}
         >
           Ver Imagen
         </button>
       ),
-      ignoreRowClick: true,
     },
   ];
 
   const filteredItems = items.filter(
     (item) =>
-      item.nombre && item.nombre.toLowerCase().includes(filterText.toLowerCase())
+      item.nombre &&
+      item.nombre.toLowerCase().includes(filterText.toLowerCase())
   );
 
   return (
@@ -110,43 +174,34 @@ export default function ListadoPage() {
       <DataTable
         columns={columns}
         data={filteredItems}
+        customStyles={customStyles}
+        theme="dark"
         pagination
-        responsive
         highlightOnHover
-        striped
-        dense
+        pointerOnHover
+        responsive
         noDataComponent="No se encontraron resultados"
-        customStyles={{
-          rows: {
-            style: {
-              minHeight: "50px",
-            },
-          },
-          cells: {
-            style: {
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            },
-          },
-        }}
       />
 
       {/* Modal para mostrar la imagen */}
       {selectedImage && (
         <div className="modal show d-block" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+            <div className="modal-content bg-dark text-white border border-secondary shadow">
               <div className="modal-header">
                 <h5 className="modal-title">Imagen del Artículo</h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close btn-close-white"
                   onClick={() => setSelectedImage(null)}
                 ></button>
               </div>
               <div className="modal-body text-center">
-                <img src={selectedImage} alt="Imagen del artículo" className="img-fluid rounded" />
+                <img
+                  src={selectedImage}
+                  alt="Imagen del artículo"
+                  className="img-fluid rounded"
+                />
               </div>
               <div className="modal-footer">
                 <button
@@ -166,12 +221,12 @@ export default function ListadoPage() {
       {selectedText && (
         <div className="modal show d-block" tabIndex="-1">
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+            <div className="modal-content bg-dark text-white border border-secondary shadow">
               <div className="modal-header">
                 <h5 className="modal-title">{selectedText.title}</h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close btn-close-white"
                   onClick={() => setSelectedText(null)}
                 ></button>
               </div>
@@ -191,7 +246,8 @@ export default function ListadoPage() {
           </div>
         </div>
       )}
-        <div className="text-center mt-4">
+
+      <div className="text-center mt-4">
         <Link href="/" className="btn btn-secondary">
           Volver al Menú Principal
         </Link>
